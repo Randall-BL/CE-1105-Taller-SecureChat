@@ -1,0 +1,288 @@
+% ─────────────────────────────────────────────────────────────
+% Informe — Taller "SecureChat" · CE-1105 Seguridad de la Información
+% Compilar:  pdflatex Informe_SecureChat.tex   (dos veces, por el índice)
+% ─────────────────────────────────────────────────────────────
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\definecolor{termbg}{gray}{0.96}
+\lstdefinestyle{term}{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{termbg},
+  frame=single, rulecolor=\color{gray!40},
+  breaklines=true, columns=fullflexible,
+  xleftmargin=6pt, xrightmargin=6pt, framexleftmargin=6pt
+}
+\lstset{style=term}
+
+\newcommand{\captura}[2]{%
+  \begin{center}\fbox{\includegraphics[width=0.95\linewidth]{#1}}\end{center}%
+  \begin{center}\small\textit{#2}\end{center}}
+\newcommand{\ok}{\textcolor{green!50!black}{$\checkmark$}}
+
+% ====== COMPLETAR ======
+\newcommand{\estudiantes}{Randall Bolaños (carné \_\_\_\_\_\_\_\_) \and Javier Tenorio (carné \_\_\_\_\_\_\_\_)}
+\newcommand{\fechaentrega}{\_\_\_ de octubre de 2026}
+\newcommand{\enlacevideo}{\url{https://ENLACE-DEL-VIDEO}}
+% =======================
+
+\title{\textbf{SecureChat: comunicación segura con criptografía híbrida}\\\large Taller de Criptografía Aplicada --- Informe y documentación}
+\author{\estudiantes}
+\date{CE-1105 Seguridad de la Información \quad \fechaentrega}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\bigskip
+
+\noindent\textbf{Video de demostración:} \enlacevideo
+
+\noindent\textbf{Código fuente:} \texttt{securechat.py}, \texttt{mitm\_proxy.py},
+\texttt{test\_securechat.py} (ver \texttt{README.md} para instalar y ejecutar).
+
+% ═══════════════════════════════════════════════════════════════
+\section{Resumen de la solución}
+
+SecureChat es una aplicación de consola en Python~3 que se ejecuta dos veces en la misma
+computadora: una instancia \emph{escucha} (Bob) y otra se \emph{conecta} (Alice) mediante un
+socket TCP real sobre \texttt{127.0.0.1}. Antes del primer mensaje ambas completan un
+\emph{handshake} asimétrico (RSA-2048) que establece una clave de sesión AES-256 aleatoria sin
+transmitirla nunca en claro; a partir de ahí cada mensaje se protege con AES-256-GCM, que cifra
+y autentica. Se usa la biblioteca \texttt{cryptography} (versión 43).
+
+Además se incluye \texttt{mitm\_proxy.py}, un proxy que se intercala entre ambos procesos,
+imprime los bytes que realmente cruzan la red y puede alterar un byte del ciphertext para
+demostrar la detección de manipulación, y un conjunto de 9 pruebas automáticas.
+
+% ═══════════════════════════════════════════════════════════════
+\section{Protocolo implementado}
+
+\subsection{Algoritmos y tamaños de clave}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Elemento} & \textbf{Elección} \\ \midrule
+Par asimétrico (cada participante) & RSA, $e=65537$, \textbf{2048 bits}. Privada en \texttt{claves/<nombre>\_privada.pem} con permisos 600. \\
+Protección de la clave de sesión & \textbf{RSA-OAEP} con MGF1-SHA256 y SHA-256 (256 B de salida). \\
+Autenticación del iniciador & Firma \textbf{RSA-PSS-SHA256} de Alice sobre (resumen del handshake $\|$ clave cifrada). \\
+Clave de sesión & 32 bytes de \texttt{os.urandom} (CSPRNG), nueva en cada ejecución: \textbf{AES-256}. \\
+Cifrado de mensajes & \textbf{AES-256-GCM}: nonce de 96 bits, tag de 128 bits. \\
+Nonce & prefijo de dirección (4 B) $\|$ contador de 64 bits; nunca se repite. \\
+Datos asociados (AAD) & \texttt{"SecureChat-v1"} $\|$ tipo de trama $\|$ $H$, con $H=\mathrm{SHA256}(\texttt{"SecureChat-v1"}\|\mathrm{HELLO}_A\|\mathrm{HELLO}_B)$. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Handshake}
+
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize,columns=fullflexible,keepspaces=true]
+ Alice (conectar)                                       Bob (escuchar)
+ HELLO {nombre, pubA}   ---------------------------------->   (publico)
+                        <----------------------------------  HELLO {nombre, pubB}
+ K = os.urandom(32)                   <- clave AES-256 de sesion
+ C = RSA-OAEP(pubB, K)                <- solo privB la puede abrir
+ S = RSA-PSS-Sign(privA, H || C)      <- prueba de que la envia Alice
+ KEY_EXCHANGE  C || S   ---------------------------------->  Verify(pubA, S)
+                                                             K = RSA-OAEP^-1(privB, C)
+                        <----------------------------------  SESSION_OK = AES-GCM_K("SESSION-OK")
+ verifica SESSION_OK
+ ====== ambos poseen K  ->  "SESION SEGURA ESTABLECIDA"  ->  chat AES-256-GCM ======
+\end{lstlisting}
+
+La clave de sesión no está escrita en el código y solo cruza el socket cifrada con la clave
+pública de Bob. Las claves privadas jamás se transmiten ni se imprimen. El mensaje
+\texttt{SESSION\_OK} sirve de confirmación: al estar cifrado y autenticado con $K$, Alice
+comprueba que Bob obtuvo exactamente la misma clave. De forma opcional,
+\texttt{-{}-clave-par <pem>} fija la clave pública esperada del otro extremo (\emph{pinning}) para
+impedir que un intermediario sustituya las claves públicas en el HELLO.
+
+\subsection{Estructura de los mensajes transmitidos}
+
+Toda trama tiene la forma \texttt{[longitud 4 B][tipo 1 B][payload]}:
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Tipo} & \textbf{Nombre} & \textbf{Payload} & \textbf{¿Protegido?} \\ \midrule
+\texttt{0x01} & HELLO        & JSON \{nombre, clave pública PEM\} & No (es público) \\
+\texttt{0x02} & KEY\_EXCHANGE & RSA-OAEP($K$) 256 B $\|$ firma PSS 256 B & RSA \\
+\texttt{0x03} & SESSION\_OK   & nonce $\|$ ciphertext $\|$ tag & AES-256-GCM \\
+\texttt{0x10} & DATA         & nonce 12 B $\|$ ciphertext $n$ B $\|$ tag 16 B & AES-256-GCM \\
+\texttt{0x11} & BYE          & nonce $\|$ ciphertext $\|$ tag & AES-256-GCM \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Ejemplo real: la trama del mensaje \texttt{"Hola Bob"} (41 bytes) tomada de la ejecución:
+
+\begin{lstlisting}[basicstyle=\ttfamily\tiny,columns=fullflexible,keepspaces=true]
+0000 0025 | 10 | 0000 0001 0000 0000 0000 0000 | 89e8 19b0 2b49 bb5a | f42e c623 7b1f 7be7 c272 013e 490a 77a8
+longitud   tipo   nonce (direccion=1, ctr=0)     ciphertext (8 B)      tag GCM (16 B)
+\end{lstlisting}
+
+Los bytes ASCII de ``Hola Bob'' (\texttt{486f 6c61 2042 6f62}) no aparecen en la trama.
+
+\textbf{Nonce.} Los 4 primeros bytes identifican la dirección (\texttt{00000001} Alice$\to$Bob,
+\texttt{00000002} Bob$\to$Alice) y los 8 restantes son un contador que solo crece. Así ningún
+extremo repite un nonce propio y los nonces de ambos extremos nunca colisionan aunque compartan
+$K$. El receptor exige además contador estrictamente creciente (anti-\emph{replay}).
+
+% ═══════════════════════════════════════════════════════════════
+\section{Desarrollo y evidencias}
+
+La ejecución de las capturas usó tres terminales: Bob (\texttt{escuchar}, puerto 5000), el
+proxy (puerto 6000 $\to$ 5000, alterando la 7.ª trama DATA) y Alice (\texttt{conectar} al 6000).
+Las salidas completas están en la carpeta \texttt{evidencia/}.
+
+\subsection{Pasos 1--3: conexión, material asimétrico y handshake}
+
+Cada instancia genera (o carga) su par RSA-2048, muestra solo la ruta y la huella de la clave
+pública (nunca el contenido de la privada), establece la conexión TCP indicando con quién está
+conectada y completa los 4 pasos del handshake antes de habilitar el chat.
+
+\captura{capturas/01_handshake_bob.png}{Bob: claves, conexión TCP aceptada, handshake y ``sesión segura establecida''.}
+\captura{capturas/02_handshake_alice.png}{Alice: la clave de sesión se genera en tiempo de ejecución y solo viaja cifrada con RSA-OAEP (256 B).}
+
+\subsection{Pasos 4--5: mensajes protegidos y conversación bidireccional}
+
+El emisor muestra el plaintext local, el nonce, el ciphertext, el tag y los bytes exactos
+escritos en el socket; el receptor muestra los bytes recibidos y, \emph{solo tras verificar el
+tag}, el plaintext recuperado. Se enviaron tres mensajes en cada dirección; el contador del
+nonce avanza (0, 1, 2, \dots) en cada mensaje.
+
+\captura{capturas/03_chat_alice.png}{Terminal de Alice: mensajes propios (plaintext $\to$ ciphertext) y mensajes de Bob (ciphertext $\to$ plaintext verificado).}
+\captura{capturas/04_chat_bob.png}{Terminal de Bob: los bytes recibidos son idénticos a los enviados por Alice.}
+
+\textbf{Lo que ve un tercero en la red.} El proxy imprime cada trama tal como cruza el socket.
+Solo los HELLO son legibles (contienen claves \emph{públicas}); todo lo demás es ciphertext.
+
+\captura{capturas/05_proxy_trafico.png}{Tráfico capturado por el proxy: ningún mensaje del chat aparece en claro.}
+
+Sobre la captura binaria completa (\texttt{evidencia/captura.bin}):
+\begin{lstlisting}
+$ grep -a -c "Hola Bob"  captura.bin   ->  0
+$ grep -a -c "4321"      captura.bin   ->  0
+$ grep -a -c "PRIVATE"   captura.bin   ->  0
+\end{lstlisting}
+
+\subsection{Paso 6: detección de manipulación}
+
+Se hicieron dos pruebas: (a) el proxy invirtió un bit del primer byte del ciphertext de la
+trama ``Transferir 100 colones a Bob'' y (b) Bob usó \texttt{/alterar}, que modifica un byte del
+ciphertext antes de enviarlo. En ambos casos el receptor detecta que el tag GCM no coincide,
+\textbf{rechaza} el mensaje y no muestra ningún plaintext. El siguiente mensaje legítimo se
+acepta con normalidad.
+
+\captura{capturas/06_alteracion_rechazada_bob.png}{Bob rechaza la trama alterada por el proxy; después acepta ``Este si llega bien''.}
+\captura{capturas/07_alteracion_rechazada_alice.png}{Alice rechaza el mensaje que Bob alteró con \texttt{/alterar}.}
+
+\subsection{Pruebas automáticas}
+
+\captura{capturas/08_pruebas_automaticas.png}{Las 9 pruebas de requisitos de seguridad pasan.}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Verificación de requisitos mínimos}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}cX X@{}}
+\toprule
+ & \textbf{Requisito} & \textbf{Cómo se cumple} \\ \midrule
+\ok & Python 3 y sockets TCP/IP & \texttt{socket.AF\_INET/SOCK\_STREAM} sobre 127.0.0.1 \\
+\ok & Biblioteca reconocida & \texttt{cryptography} (hazmat RSA, AESGCM) \\
+\ok & Handshake asimétrico & RSA-2048 OAEP + firma PSS \\
+\ok & Clave de sesión dinámica & \texttt{os.urandom(32)} por sesión; prueba \emph{clave\_distinta\_en\_cada\_sesion} \\
+\ok & Ninguna privada por el socket & solo se envían públicas; prueba de captura y \texttt{grep PRIVATE} = 0 \\
+\ok & Cifrado autenticado & AES-256-GCM en DATA, SESSION\_OK y BYE \\
+\ok & Nonce correcto y no repetido & prefijo de dirección + contador; prueba con 2000 cifrados \\
+\ok & Rechazo de tag inválido & \texttt{InvalidTag} $\Rightarrow$ ``MENSAJE RECHAZADO''; prueba alterando cada byte \\
+\ok & Evidencia visible & plaintext local, ciphertext enviado, ciphertext recibido, plaintext recuperado \\
+\ok & No Base64/hex como cifrado & hex solo para mostrar bytes en pantalla \\
+\ok & No ECB & GCM (modo contador autenticado); mismo texto $\Rightarrow$ ciphertexts distintos \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Preguntas de cierre}
+
+\begin{enumerate}
+\item \textbf{¿Qué problema resuelve la criptografía asimétrica durante el handshake?}
+  El de la distribución de claves: Alice y Bob no comparten ningún secreto previo y el canal es
+  observable. Con RSA-OAEP Alice cifra la clave de sesión con la clave \emph{pública} de Bob,
+  que puede conocer cualquiera, y solo la \emph{privada} de Bob, que nunca sale de su equipo,
+  puede recuperarla. Así acuerdan un secreto simétrico sin enviarlo nunca en claro. La firma
+  RSA-PSS de Alice autentica además quién generó esa clave.
+
+\item \textbf{¿Por qué la conversación utiliza criptografía simétrica después del handshake?}
+  Porque AES-GCM es órdenes de magnitud más rápido que RSA, no tiene límite práctico de tamaño
+  (RSA-OAEP-2048 solo cifra unos 190 B por operación y produce 256 B) y aporta autenticación
+  integrada. RSA se usa una sola vez para acordar $K$, y la primitiva eficiente protege todos los
+  mensajes: eso es la criptografía híbrida.
+
+\item \textbf{¿Qué información puede observar un tercero que capture los paquetes?}
+  IPs y puertos; el momento y el tamaño de cada trama, lo que deja inferir la longitud de cada
+  mensaje; los HELLO, con los nombres y las claves \emph{públicas}; la clave de sesión cifrada
+  con RSA y la firma; y, por cada mensaje, el tipo, el nonce, el ciphertext y el tag. No puede
+  ver el contenido, la clave de sesión ni las claves privadas (ver captura del proxy).
+
+\item \textbf{¿Por qué el nonce puede viajar junto al ciphertext y por qué no debe repetirse?}
+  El nonce no es secreto: solo garantiza que cada cifrado sea único, y la seguridad descansa en
+  la clave. El receptor lo necesita para descifrar. Pero GCM cifra en modo contador: repetir un
+  nonce con la misma clave reutiliza el mismo flujo de cifrado ($C_1\oplus C_2 = P_1\oplus P_2$,
+  lo que filtra el contenido) y permite recuperar la subclave de autenticación GHASH y
+  \emph{falsificar} tags. Por eso usamos un contador monotónico con prefijo por dirección.
+
+\item \textbf{¿Qué función cumple el authentication tag?}
+  Es un código de autenticación de 128 bits que se calcula con $K$ sobre el ciphertext y los
+  datos asociados. El receptor lo verifica \emph{antes} de entregar el plaintext: si cambió un
+  solo bit del nonce, el ciphertext, el tag o el contexto, la verificación falla y el mensaje se
+  rechaza. Garantiza integridad y autenticidad (lo envió alguien que posee $K$). Cifrar sin
+  autenticar permitiría modificar mensajes sin que nadie lo detectara.
+
+\item \textbf{¿Qué ocurriría si la clave de sesión se transmitiera sin protección?}
+  Cualquiera que capturara el tráfico obtendría $K$ y podría descifrar toda la conversación y
+  además fabricar o modificar mensajes con tags válidos, que el receptor aceptaría como
+  auténticos. AES-GCM no aportaría ninguna seguridad. Codificarla en Base64 o hex no cambia
+  nada: codificar no es cifrar.
+
+\item \textbf{¿Qué ocurriría si un atacante obtiene una de las claves privadas?}
+  Con la privada de \emph{Bob} podría descifrar el KEY\_EXCHANGE de cualquier sesión capturada,
+  pasada o futura, obtener $K$ y leerla completa, porque el transporte de clave con RSA no
+  ofrece \emph{forward secrecy}. También podría suplantar a Bob. Con la privada de
+  \emph{Alice} podría firmar intercambios falsos y suplantarla ante Bob, aunque no descifrar
+  sesiones pasadas. Las mitigaciones son proteger las privadas (permisos, contraseña, HSM),
+  revocarlas y regenerarlas, y usar un intercambio efímero (ECDHE/X25519) firmado, como TLS~1.3,
+  para lograr \emph{forward secrecy}.
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════
+\section{Conclusiones y limitaciones}
+
+La práctica separa con claridad los dos papeles. La criptografía asimétrica resuelve una sola
+vez el problema de acordar un secreto sin canal seguro previo, y la simétrica autenticada
+protege eficientemente cada mensaje. La prueba de manipulación muestra que cifrar no basta:
+sin el tag, un atacante podría alterar el ciphertext sin ser detectado.
+
+Limitaciones conscientes del diseño:
+\begin{itemize}
+  \item La autenticidad de las claves públicas depende de comparar huellas o de usar
+        \texttt{-{}-clave-par}; no hay PKI.
+  \item No hay \emph{forward secrecy}.
+  \item La longitud de los mensajes es observable.
+  \item Las privadas se guardan sin contraseña; para la demo solo se protegen con permisos 600.
+\end{itemize}
+
+\end{document}

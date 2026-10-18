@@ -1,0 +1,33 @@
+Proxy escuchando en 127.0.0.1:6000 → reenvía a 127.0.0.1:5000
+Modo ataque: se alterará la trama DATA número 7
+[Alice→Bob] HELLO  505 B
+    {"nombre": "Alice", "clave_publica": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzEG3M3UTR3 …
+[Bob→Alice] HELLO  503 B
+    {"nombre": "Bob", "clave_publica": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsAS3l/iTBIGw …
+[Alice→Bob] KEY_EXCHANGE  517 B
+    0000 0201 0271 7519 79a6 a4d4 8cc0 2ea7 770e 413e a0e7 ed08 b70b 909f 147f 6404 cf63 f3dd 6407 aced 9e6b c079 5423 dc08 85be 14ac 23f5 0ec6 5a5f af82 9b92 5803 1cb6 485b 5606 6d5f a3c6 80d7 02ae 3697 … (+437 B)
+[Bob→Alice] SESSION_OK  43 B
+    0000 0027 0300 0000 0200 0000 0000 0000 0024 344f f3f6 9dc7 8fd5 0c1c 1cac ebd7 d92b 9b8c 5917 5c32 631c c3
+[Alice→Bob] DATA  41 B
+    0000 0025 1000 0000 0100 0000 0000 0000 0089 e819 b02b 49bb 5af4 2ec6 237b 1f7b e7c2 7201 3e49 0a77 a8
+[Bob→Alice] DATA  59 B
+    0000 0037 1000 0000 0200 0000 0000 0000 0133 71f3 3784 8eb7 0b97 911a 2e8e 1c19 b4f5 d48c ae4c 4bb4 39d1 cc9e c94f d468 de86 d5ca 3063 4d4c af63 67
+[Alice→Bob] DATA  58 B
+    0000 0036 1000 0000 0100 0000 0000 0000 010c c521 1bbe 1606 8ce9 28d2 06af c77d da7a b1f3 704b 9384 de80 990e e863 fc98 7ca2 8358 2e19 3e5d c785
+[Bob→Alice] DATA  58 B
+    0000 0036 1000 0000 0200 0000 0000 0000 02d2 7bcc 2935 80ee 4495 47e8 129c 00ea 9faa 6a42 5212 aae7 ff46 1701 bd3d 9a2e 4675 5ed0 5da4 6b8c 0673
+[Alice→Bob] DATA  56 B
+    0000 0034 1000 0000 0100 0000 0000 0000 02ac 945d 39a7 d62f 27e7 e713 9fdd 23c6 7555 93d0 0bbb 0c83 ba35 543e 3b62 a09e 4839 f3f6 8370 c9f6
+[Bob→Alice] DATA  54 B
+    0000 0032 1000 0000 0200 0000 0000 0000 036e 9aeb 391e 2ee3 c7c8 60ac 38f3 2ddc 01fd 8b57 a00b b61d b143 e4dd 592c 5e27 ec2f a8e2 402f
+[Alice→Bob] DATA  61 B
+    0000 0039 1000 0000 0100 0000 0000 0000 0358 5b7f 2b9d ed4a aaee 34c8 60ba e53b 3819 2e69 5600 6a19 2d04 e17c ee95 7094 0f45 5988 76a2 d46e ace5 b2b6 de
+    ⚠ PROXY ALTERÓ el byte 17 de la trama (1er byte del ciphertext, XOR 0x01)
+[Bob→Alice] DATA  57 B
+    0000 0035 1000 0000 0200 0000 0000 0000 04f7 95d2 05e0 91f1 1d01 7b6e 26fe ac77 c31f 6b90 5ea6 50d0 17a4 4972 e31f af35 e142 9978 36e3 c025 6d
+[Alice→Bob] DATA  51 B
+    0000 002f 1000 0000 0100 0000 0000 0000 0454 7f0d 2362 4c30 6b56 0147 25d5 4c70 c3b9 951f 008a ec32 5530 7efd 7d0d 22af 9a8c 24
+[Alice→Bob] BYE  36 B
+    0000 0020 1100 0000 0100 0000 0000 0000 0546 a110 c5e1 9d6f 9060 51ba acd7 f54d d787 814d
+Captura guardada en /tmp/claude-1000/-home-randall-Escritorio-seguridad-TALLER2/90d409d5-22b6-4125-8536-b57771d2a14d/scratchpad/demo/captura.bin
+Proxy finalizado.

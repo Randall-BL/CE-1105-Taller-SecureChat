@@ -1,0 +1,14 @@
+test_ciphertext_alterado_es_rechazado (test_securechat.TestSecureChat.test_ciphertext_alterado_es_rechazado) ... ok
+test_clave_de_sesion_distinta_en_cada_sesion (test_securechat.TestSecureChat.test_clave_de_sesion_distinta_en_cada_sesion) ... ok
+test_claves_rsa_2048_y_privada_con_permisos_600 (test_securechat.TestSecureChat.test_claves_rsa_2048_y_privada_con_permisos_600) ... ok
+test_handshake_ambos_extremos_misma_clave (test_securechat.TestSecureChat.test_handshake_ambos_extremos_misma_clave) ... ok
+test_mismo_texto_produce_ciphertext_distinto (test_securechat.TestSecureChat.test_mismo_texto_produce_ciphertext_distinto) ... ok
+test_ni_plaintext_ni_clave_privada_ni_clave_sesion_en_el_socket (test_securechat.TestSecureChat.test_ni_plaintext_ni_clave_privada_ni_clave_sesion_en_el_socket) ... ok
+test_nonce_nunca_se_repite (test_securechat.TestSecureChat.test_nonce_nunca_se_repite) ... ok
+test_pin_de_clave_publica_detecta_suplantacion (test_securechat.TestSecureChat.test_pin_de_clave_publica_detecta_suplantacion) ... ok
+test_replay_rechazado (test_securechat.TestSecureChat.test_replay_rechazado) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.790s
+
+OK

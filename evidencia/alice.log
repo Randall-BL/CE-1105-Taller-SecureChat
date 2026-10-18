@@ -1,0 +1,72 @@
+════════════════════════════════════════════════════════════════════════
+  SecureChat — Alice  (conectar)
+════════════════════════════════════════════════════════════════════════
+  Par RSA-2048 GENERADO:
+    clave pública : claves/alice_publica.pem   (se comparte en el handshake)
+    huella pública: 4d06:b91d:c670:e321:bdac:9f42:a749:d9ca
+    clave privada : claves/alice_privada.pem   (local, permisos 600, NUNCA se muestra ni se envía)
+
+Conectado por TCP a 127.0.0.1:6000 (puerto local 57820)
+
+Handshake (criptografía asimétrica):
+  [1/4] → HELLO enviado (Alice + clave pública, 500 B)
+  [2/4] ← HELLO de Bob; huella de su clave pública: 4dc8:feee:5a18:57dd:76bd:d490:8415:a26f
+  [3/4] → KEY_EXCHANGE: clave AES-256 generada y cifrada con RSA-OAEP (256 B) + firma RSA-PSS (256 B)
+        clave de sesión cifrada (lo que viaja): 7175 1979 a6a4 d48c c02e a777 0e41 3ea0 e7ed 08b7 0b90 9f14 … (+232 B)
+  [4/4] ← SESSION_OK verificado con AES-GCM: Bob posee la misma clave
+
+════════════════════════════════════════════════════════════════════════
+  ✓ SESIÓN SEGURA ESTABLECIDA con Bob
+    Alice ⇄ Bob  |  127.0.0.1:57820 ⇄ 127.0.0.1:6000
+    Mensajes protegidos con AES-256-GCM (nonce 96 bits, tag 128 bits)
+════════════════════════════════════════════════════════════════════════
+
+Comandos:
+  <texto>            envía el mensaje cifrado con AES-256-GCM
+  /alterar <texto>   PRUEBA DE MANIPULACIÓN: cifra el mensaje y modifica 1 byte
+                     del ciphertext antes de enviarlo (simula un atacante en la red)
+  /ayuda             muestra esta ayuda
+  /salir             cierra la sesión de forma controlada
+
+┌─ [YO → Bob]  plaintext local: 'Hola Bob'
+│  nonce (12 B):        0000 0001 0000 0000 0000 0000
+│  ciphertext (8 B):    89e8 19b0 2b49 bb5a
+│  tag GCM (16 B):      f42e c623 7b1f 7be7 c272 013e 490a 77a8
+└─ bytes en el socket (41 B): 0000 0025 1000 0000 0100 0000 0000 0000 0089 e819 b02b 49bb 5af4 2ec6 237b 1f7b e7c2 7201 3e49 0a77 a8
+┌─ [Bob → YO]  bytes recibidos del socket (59 B): 0000 0037 1000 0000 0200 0000 0000 0000 0133 71f3 3784 8eb7 0b97 911a 2e8e 1c19 b4f5 d48c ae4c 4bb4 39d1 cc9e c94f d468 de86 d5ca 3063 4d4c af63 67
+│  nonce: 0000 0002 0000 0000 0000 0001   ciphertext+tag (42 B): 3371 f337 848e b70b 9791 1a2e 8e1c 19b4 f5d4 8cae 4c4b b439 d1cc 9ec9 4fd4 68de 86d5 ca30 634d 4caf 6367
+│  ✓ tag GCM verificado: integridad y autenticidad OK
+└─ Bob dice: Hola Alice, te leo cifrado
+┌─ [YO → Bob]  plaintext local: 'El codigo secreto es 4321'
+│  nonce (12 B):        0000 0001 0000 0000 0000 0001
+│  ciphertext (25 B):   0cc5 211b be16 068c e928 d206 afc7 7dda 7ab1 f370 4b93 84de 80
+│  tag GCM (16 B):      990e e863 fc98 7ca2 8358 2e19 3e5d c785
+└─ bytes en el socket (58 B): 0000 0036 1000 0000 0100 0000 0000 0000 010c c521 1bbe 1606 8ce9 28d2 06af c77d da7a b1f3 704b 9384 de80 990e e863 fc98 7ca2 8358 2e19 3e5d c785
+┌─ [Bob → YO]  bytes recibidos del socket (58 B): 0000 0036 1000 0000 0200 0000 0000 0000 02d2 7bcc 2935 80ee 4495 47e8 129c 00ea 9faa 6a42 5212 aae7 ff46 1701 bd3d 9a2e 4675 5ed0 5da4 6b8c 0673
+│  nonce: 0000 0002 0000 0000 0000 0002   ciphertext+tag (41 B): d27b cc29 3580 ee44 9547 e812 9c00 ea9f aa6a 4252 12aa e7ff 4617 01bd 3d9a 2e46 755e d05d a46b 8c06 73
+│  ✓ tag GCM verificado: integridad y autenticidad OK
+└─ Bob dice: Recibido, nadie mas lo ve
+┌─ [YO → Bob]  plaintext local: 'Tercer mensaje de Alice'
+│  nonce (12 B):        0000 0001 0000 0000 0000 0002
+│  ciphertext (23 B):   ac94 5d39 a7d6 2f27 e7e7 139f dd23 c675 5593 d00b bb0c 83
+│  tag GCM (16 B):      ba35 543e 3b62 a09e 4839 f3f6 8370 c9f6
+└─ bytes en el socket (56 B): 0000 0034 1000 0000 0100 0000 0000 0000 02ac 945d 39a7 d62f 27e7 e713 9fdd 23c6 7555 93d0 0bbb 0c83 ba35 543e 3b62 a09e 4839 f3f6 8370 c9f6
+┌─ [Bob → YO]  bytes recibidos del socket (54 B): 0000 0032 1000 0000 0200 0000 0000 0000 036e 9aeb 391e 2ee3 c7c8 60ac 38f3 2ddc 01fd 8b57 a00b b61d b143 e4dd 592c 5e27 ec2f a8e2 402f
+│  nonce: 0000 0002 0000 0000 0000 0003   ciphertext+tag (37 B): 6e9a eb39 1e2e e3c7 c860 ac38 f32d dc01 fd8b 57a0 0bb6 1db1 43e4 dd59 2c5e 27ec 2fa8 e240 2f
+│  ✓ tag GCM verificado: integridad y autenticidad OK
+└─ Bob dice: Tercer mensaje de Bob
+┌─ [YO → Bob]  plaintext local: 'Transferir 100 colones a Bob'
+│  nonce (12 B):        0000 0001 0000 0000 0000 0003
+│  ciphertext (28 B):   595b 7f2b 9ded 4aaa ee34 c860 bae5 3b38 192e 6956 006a 192d 04e1 7cee
+│  tag GCM (16 B):      9570 940f 4559 8876 a2d4 6eac e5b2 b6de
+└─ bytes en el socket (61 B): 0000 0039 1000 0000 0100 0000 0000 0000 0359 5b7f 2b9d ed4a aaee 34c8 60ba e53b 3819 2e69 5600 6a19 2d04 e17c ee95 7094 0f45 5988 76a2 d46e ace5 b2b6 de
+┌─ [Bob → YO]  bytes recibidos del socket (57 B): 0000 0035 1000 0000 0200 0000 0000 0000 04f7 95d2 05e0 91f1 1d01 7b6e 26fe ac77 c31f 6b90 5ea6 50d0 17a4 4972 e31f af35 e142 9978 36e3 c025 6d
+│  nonce: 0000 0002 0000 0000 0000 0004   ciphertext+tag (40 B): f795 d205 e091 f11d 017b 6e26 feac 77c3 1f6b 905e a650 d017 a449 72e3 1faf 35e1 4299 7836 e3c0 256d
+│  ✗ AUTENTICACIÓN FALLIDA: el tag GCM no coincide.
+└─ ✗ MENSAJE RECHAZADO — fue alterado en tránsito; no se muestra ningún plaintext.
+┌─ [YO → Bob]  plaintext local: 'Este si llega bien'
+│  nonce (12 B):        0000 0001 0000 0000 0000 0004
+│  ciphertext (18 B):   547f 0d23 624c 306b 5601 4725 d54c 70c3 b995
+│  tag GCM (16 B):      1f00 8aec 3255 307e fd7d 0d22 af9a 8c24
+└─ bytes en el socket (51 B): 0000 002f 1000 0000 0100 0000 0000 0000 0454 7f0d 2362 4c30 6b56 0147 25d5 4c70 c3b9 951f 008a ec32 5530 7efd 7d0d 22af 9a8c 24
+Sesión finalizada. Clave de sesión descartada.

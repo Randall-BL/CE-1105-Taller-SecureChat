@@ -1,0 +1,11 @@
+claves/
+__pycache__/
+*.pyc
+venv/
+*.aux
+*.log
+*.toc
+*.out
+!evidencia/*.log
+captura.bin
+!evidencia/captura.bin
