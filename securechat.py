@@ -66,6 +66,8 @@ class ErrorProtocolo(Exception):
 # ───────────────────────────── Presentación ─────────────────────────────────
 
 _COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+if _COLOR and os.name == "nt":
+    os.system("")  # activa las secuencias ANSI en la consola clásica de Windows
 _print_lock = threading.Lock()
 
 

@@ -5,6 +5,7 @@ Pruebas automáticas de los requisitos de seguridad de SecureChat.
   python3 -m unittest -v test_securechat.py
 """
 
+import os
 import socket
 import tempfile
 import threading
@@ -72,7 +73,8 @@ class TestSecureChat(unittest.TestCase):
         priv, pub, f_priv, f_pub, nueva = sc.cargar_o_generar_claves("alice", Path(self.tmp))
         self.assertTrue(nueva)
         self.assertGreaterEqual(priv.key_size, 2048)
-        self.assertEqual(f_priv.stat().st_mode & 0o777, 0o600)
+        if os.name != "nt":   # Windows no tiene permisos POSIX
+            self.assertEqual(f_priv.stat().st_mode & 0o777, 0o600)
         self.assertNotIn(b"PRIVATE", f_pub.read_bytes())
 
     def test_handshake_ambos_extremos_misma_clave(self):
